@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from core.paths import sessions_dir
 from data.database import Database
 
 
@@ -105,4 +106,4 @@ class ImportRepository:
         return f"{seq_prefix}{seq:03d}"
 
     def _session_folder(self, session_code: str) -> Path:
-        return Path("app_data") / "sessions" / session_code
+        return sessions_dir() / session_code
