@@ -3,6 +3,7 @@ from pathlib import Path
 from core.import_service import ImportService
 from data.database import Database
 from data.import_repository import ImportRepository
+from data.preview_repository import PreviewRepository
 from data.settings_repository import SettingsRepository
 
 
@@ -13,3 +14,4 @@ class AppContext:
         self.settings_repository = SettingsRepository(self.database)
         self.import_repository = ImportRepository(self.database)
         self.import_service = ImportService(self.import_repository)
+        self.preview_repository = PreviewRepository(self.database)
