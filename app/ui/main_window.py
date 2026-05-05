@@ -2,6 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
 
 from core.import_service import ImportService
+from core.pdf_service import PdfService
 from data.preview_repository import PreviewRepository
 from data.settings_repository import SettingsRepository
 from ui.screens.dashboard_screen import DashboardScreen
@@ -12,11 +13,12 @@ from ui.screens.settings_screen import SettingsScreen
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, settings_repository: SettingsRepository, import_service: ImportService, preview_repository: PreviewRepository) -> None:
+    def __init__(self, settings_repository: SettingsRepository, import_service: ImportService, preview_repository: PreviewRepository, pdf_service: PdfService) -> None:
         super().__init__()
         self.settings_repository = settings_repository
         self.import_service = import_service
         self.preview_repository = preview_repository
+        self.pdf_service = pdf_service
         self.setWindowTitle("Smart Payslip")
         self.resize(1280, 800)
         self._setup_ui()
@@ -28,7 +30,7 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.stack.addWidget(DashboardScreen())
         self.stack.addWidget(ImportScreen(self.import_service))
-        self.stack.addWidget(PreviewScreen(self.preview_repository, self.settings_repository))
+        self.stack.addWidget(PreviewScreen(self.preview_repository, self.settings_repository, self.pdf_service))
         self.stack.addWidget(HistoryScreen())
         self.stack.addWidget(SettingsScreen(self.settings_repository))
         root_layout.addWidget(self.stack, 1)

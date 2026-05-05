@@ -68,6 +68,13 @@ class PreviewRepository:
             payroll_data=json.loads(row["payroll_data_json"] or "{}"),
         )
 
+
+    def get_session_meta_for_recipient(self, recipient_id: int):
+        with self.database.connect() as conn:
+            row = conn.execute("""SELECT s.session_code, s.session_folder FROM session_recipients r
+            JOIN send_sessions s ON s.id=r.session_id WHERE r.id=?""", (recipient_id,)).fetchone()
+            return row
+
     def update_email(self, recipient_id: int, email: str, validation_status: str, sendable: bool) -> None:
         with self.database.connect() as conn:
             conn.execute("UPDATE session_recipients SET employee_email=?, validation_status=?, sendable=? WHERE id=?", (email, validation_status, 1 if sendable else 0, recipient_id))

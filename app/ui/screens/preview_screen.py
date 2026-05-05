@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QComboBox, QDialog, QFormLayout, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget, QInputDialog)
 
+from core.pdf_service import PdfService
 from data.preview_repository import PreviewRepository, RecipientView
 from data.settings_repository import SettingsRepository
 
@@ -18,11 +19,12 @@ PAYROLL_FIELDS = [
 
 
 class PreviewScreen(QWidget):
-    def __init__(self, preview_repo: PreviewRepository, settings_repo: SettingsRepository) -> None:
+    def __init__(self, preview_repo: PreviewRepository, settings_repo: SettingsRepository, pdf_service: PdfService) -> None:
         super().__init__()
         self.preview_repo = preview_repo
         self.settings_repo = settings_repo
         self.salary_unlocked = False
+        self.pdf_service = pdf_service
         self.current_session_id: int | None = None
         self._build_ui()
         self.reload_data()
@@ -41,7 +43,9 @@ class PreviewScreen(QWidget):
         reload_btn = QPushButton("Reload"); reload_btn.clicked.connect(self.reload_data)
         unlock_btn = QPushButton("Hiện số tiền"); unlock_btn.clicked.connect(self.unlock_salary)
         lock_btn = QPushButton("Khóa dữ liệu lương"); lock_btn.clicked.connect(self.lock_salary)
-        for w in [self.search, self.filter_dept, self.filter_data, self.filter_send, reload_btn, unlock_btn, lock_btn]: toolbar.addWidget(w)
+        gen_btn = QPushButton("Tạo PDF cá nhân"); gen_btn.clicked.connect(self.generate_individual_pdfs)
+        batch_btn = QPushButton("Tạo PDF batch print"); batch_btn.clicked.connect(self.generate_batch_pdf)
+        for w in [self.search, self.filter_dept, self.filter_data, self.filter_send, reload_btn, unlock_btn, lock_btn, gen_btn, batch_btn]: toolbar.addWidget(w)
         root.addLayout(toolbar)
 
         self.stats = QLabel(); root.addWidget(self.stats)
@@ -166,3 +170,32 @@ class PreviewScreen(QWidget):
         page_l.addWidget(receipt, alignment=Qt.AlignHCenter)
         lay.addWidget(page)
         dlg.exec()
+
+    def _selected_recipient_ids(self) -> list[int]:
+        return [r.id for r in self.recipients if r.selected]
+
+    def generate_individual_pdfs(self) -> None:
+        ids = self._selected_recipient_ids()
+        if not ids:
+            QMessageBox.information(self, "Không có dữ liệu", "Chưa có nhân sự được chọn gửi.")
+            return
+        choice = QMessageBox.question(self, "File đã tồn tại", "Nếu file PDF đã tồn tại, bạn muốn ghi đè không?\nChọn No để tạo file timestamped (khuyến nghị).", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        overwrite = choice == QMessageBox.Yes
+        paths = self.pdf_service.generate_individual(ids, overwrite=overwrite)
+        QMessageBox.information(self, "Hoàn tất", f"Đã tạo {len(paths)} file PDF cá nhân.")
+
+    def generate_batch_pdf(self) -> None:
+        ids = self._selected_recipient_ids()
+        if not ids:
+            QMessageBox.information(self, "Không có dữ liệu", "Chưa có nhân sự được chọn gửi.")
+            return
+        pw, ok = QInputDialog.getText(self, "Mật khẩu batch print", "Nhập salary view password để mã hóa PDF batch:", QLineEdit.Password)
+        if not ok:
+            return
+        if not self.settings_repo.verify_salary_password(pw):
+            QMessageBox.warning(self, "Sai mật khẩu", "Mật khẩu không đúng.")
+            return
+        path = self.pdf_service.generate_batch(ids, pw)
+        if path:
+            QMessageBox.information(self, "Hoàn tất", f"Đã tạo batch PDF: {path}")
+

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from core.import_service import ImportService
+from core.pdf_service import PdfService
 from data.database import Database
 from data.import_repository import ImportRepository
 from data.preview_repository import PreviewRepository
@@ -15,3 +16,4 @@ class AppContext:
         self.import_repository = ImportRepository(self.database)
         self.import_service = ImportService(self.import_repository)
         self.preview_repository = PreviewRepository(self.database)
+        self.pdf_service = PdfService(self.preview_repository, self.settings_repository)
