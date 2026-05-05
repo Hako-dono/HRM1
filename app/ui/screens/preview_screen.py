@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QComboBox, QDialog, QFormLayout, QFrame, QHBoxLay
 
 from core.email_service import EmailService
 from core.pdf_service import PdfService
+from core.salary_lock_service import SalaryLockService
 from data.preview_repository import PreviewRepository, RecipientView
 from data.settings_repository import SettingsRepository
 
@@ -20,16 +21,18 @@ PAYROLL_FIELDS = [
 
 
 class PreviewScreen(QWidget):
-    def __init__(self, preview_repo: PreviewRepository, settings_repo: SettingsRepository, pdf_service: PdfService, email_service: EmailService) -> None:
+    def __init__(self, preview_repo: PreviewRepository, settings_repo: SettingsRepository, pdf_service: PdfService, email_service: EmailService, lock_service: SalaryLockService) -> None:
         super().__init__()
         self.preview_repo = preview_repo
         self.settings_repo = settings_repo
         self.salary_unlocked = False
         self.is_sending = False
+        self.lock_service = lock_service
         self.pdf_service = pdf_service
         self.email_service = email_service
         self.current_session_id: int | None = None
         self._build_ui()
+        self.lock_service.lock_changed.connect(lambda _: self.render())
         self.reload_data()
 
     def _build_ui(self) -> None:
@@ -108,11 +111,11 @@ class PreviewScreen(QWidget):
 
     def unlock_salary(self) -> None:
         pw, ok = QInputDialog.getText(self, "Mở khóa", "Nhập mật khẩu xem lương:", QLineEdit.Password)
-        if ok and self.settings_repo.verify_salary_password(pw): self.salary_unlocked = True; self.render()
+        if ok and self.lock_service.try_unlock(pw): self.salary_unlocked = True; self.render()
         elif ok: QMessageBox.warning(self, "Sai mật khẩu", "Mật khẩu không đúng.")
 
     def lock_salary(self) -> None:
-        self.salary_unlocked = False; self.render()
+        self.lock_service.force_lock(); self.salary_unlocked = False; self.render()
 
     def on_item_changed(self, item: QTreeWidgetItem, col: int) -> None:
         if col != 8 or item.parent() is None: return
@@ -139,7 +142,7 @@ class PreviewScreen(QWidget):
             self.open_payslip_preview(rid)
 
     def open_payslip_preview(self, recipient_id: int) -> None:
-        if not self.salary_unlocked:
+        if self.lock_service.is_locked() or not self.salary_unlocked:
             QMessageBox.warning(self, "Bị khóa", "Vui lòng mở khóa dữ liệu lương trước khi xem payslip preview.")
             return
         data = self.preview_repo.get_payslip_data(recipient_id)

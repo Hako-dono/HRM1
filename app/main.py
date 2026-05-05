@@ -8,7 +8,8 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Smart Payslip")
     c = AppContext()
-    w = MainWindow(c.settings_repository, c.import_service, c.preview_repository, c.pdf_service, c.email_service, c.history_repository)
+    app.installEventFilter(c.salary_lock_service)
+    w = MainWindow(c.settings_repository, c.import_service, c.preview_repository, c.pdf_service, c.email_service, c.history_repository, c.salary_lock_service)
     w.showFullScreen()
     return app.exec()
 

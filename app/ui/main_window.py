@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidget, QListWid
 from core.email_service import EmailService
 from core.import_service import ImportService
 from core.pdf_service import PdfService
+from core.salary_lock_service import SalaryLockService
 from data.history_repository import HistoryRepository
 from data.preview_repository import PreviewRepository
 from data.settings_repository import SettingsRepository
@@ -15,22 +16,22 @@ from ui.screens.settings_screen import SettingsScreen
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, settings_repository: SettingsRepository, import_service: ImportService, preview_repository: PreviewRepository, pdf_service: PdfService, email_service: EmailService, history_repository: HistoryRepository) -> None:
+    def __init__(self, settings_repository: SettingsRepository, import_service: ImportService, preview_repository: PreviewRepository, pdf_service: PdfService, email_service: EmailService, history_repository: HistoryRepository, lock_service: SalaryLockService) -> None:
         super().__init__()
         self.setWindowTitle("Smart Payslip")
         self.resize(1280, 800)
-        self._setup_ui(settings_repository, import_service, preview_repository, pdf_service, email_service, history_repository)
+        self._setup_ui(settings_repository, import_service, preview_repository, pdf_service, email_service, history_repository, lock_service)
 
-    def _setup_ui(self, settings_repository, import_service, preview_repository, pdf_service, email_service, history_repository) -> None:
+    def _setup_ui(self, settings_repository, import_service, preview_repository, pdf_service, email_service, history_repository, lock_service) -> None:
         cw = QWidget(); self.setCentralWidget(cw)
         root = QHBoxLayout(cw); root.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._create_sidebar())
         self.stack = QStackedWidget()
-        self.stack.addWidget(DashboardScreen())
+        self.stack.addWidget(DashboardScreen(lock_service))
         self.stack.addWidget(ImportScreen(import_service))
-        self.stack.addWidget(PreviewScreen(preview_repository, settings_repository, pdf_service, email_service))
+        self.stack.addWidget(PreviewScreen(preview_repository, settings_repository, pdf_service, email_service, lock_service))
         self.stack.addWidget(HistoryScreen(history_repository, email_service, pdf_service, import_service))
-        self.stack.addWidget(SettingsScreen(settings_repository, email_service))
+        self.stack.addWidget(SettingsScreen(settings_repository, email_service, lock_service))
         root.addWidget(self.stack, 1)
 
     def _create_sidebar(self) -> QWidget:

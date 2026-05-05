@@ -3,6 +3,7 @@ from pathlib import Path
 from core.email_service import EmailService
 from core.import_service import ImportService
 from core.pdf_service import PdfService
+from core.salary_lock_service import SalaryLockService
 from data.database import Database
 from data.history_repository import HistoryRepository
 from data.import_repository import ImportRepository
@@ -15,6 +16,7 @@ class AppContext:
         self.database = Database(Path("app_data/smart_payslip.db"))
         self.database.initialize()
         self.settings_repository = SettingsRepository(self.database)
+        self.salary_lock_service = SalaryLockService(self.settings_repository)
         self.import_repository = ImportRepository(self.database)
         self.import_service = ImportService(self.import_repository)
         self.preview_repository = PreviewRepository(self.database)

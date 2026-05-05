@@ -53,6 +53,18 @@ class SettingsRepository:
             return False
         return hashlib.sha256(raw_password.encode("utf-8")).hexdigest() == current.salary_view_password_hash
 
+
+    def change_salary_password(self, old_password: str, new_password: str, confirm_password: str) -> tuple[bool, str]:
+        if not new_password.strip():
+            return False, "Mật khẩu mới không được để trống."
+        if new_password != confirm_password:
+            return False, "Xác nhận mật khẩu mới không khớp."
+        cur = self.get()
+        if cur.salary_view_password_hash and not self.verify_salary_password(old_password):
+            return False, "Mật khẩu cũ không đúng."
+        self.save(cur, new_password)
+        return True, "Đổi mật khẩu thành công."
+
     def save(self, payload: SettingsData, salary_password_raw: str | None = None) -> None:
         password_hash = payload.salary_view_password_hash
         if salary_password_raw:

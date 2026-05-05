@@ -3,15 +3,17 @@ from __future__ import annotations
 from PySide6.QtWidgets import (QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QSpinBox, QTextEdit, QVBoxLayout, QWidget, QInputDialog)
 
 from core.email_service import EmailService
+from core.salary_lock_service import SalaryLockService
 from data.settings_repository import SettingsData, SettingsRepository
 
 
 class SettingsScreen(QWidget):
-    def __init__(self, settings_repository: SettingsRepository, email_service: EmailService | None = None) -> None:
+    def __init__(self, settings_repository: SettingsRepository, email_service: EmailService | None = None, lock_service: SalaryLockService | None = None) -> None:
         super().__init__()
         self.settings_repository = settings_repository
         self.email_service = email_service
         self.current_settings: SettingsData | None = None
+        self.lock_service = lock_service
         self._build_ui(); self.load_settings()
 
     def _build_ui(self) -> None:
@@ -32,8 +34,8 @@ class SettingsScreen(QWidget):
         form.addRow("Payslip thank-you text", self.payslip_thank_you_text); form.addRow("Payslip security note", self.payslip_security_note); form.addRow("Salary view password", self.salary_view_password)
         form.addRow("Send delay seconds", self.send_delay_seconds); form.addRow("Auto lock minutes", self.auto_lock_minutes); form.addRow("Storage base path", self.storage_base_path)
         root.addWidget(form_group)
-        row = QHBoxLayout(); test = QPushButton("Test email"); test.clicked.connect(self._on_test_email); save = QPushButton("Save settings"); save.clicked.connect(self.save_settings)
-        row.addWidget(test); row.addStretch(1); row.addWidget(save); root.addLayout(row)
+        row = QHBoxLayout(); test = QPushButton("Test email"); test.clicked.connect(self._on_test_email); chg = QPushButton("Đổi mật khẩu xem lương"); chg.clicked.connect(self._change_salary_password); save = QPushButton("Save settings"); save.clicked.connect(self.save_settings)
+        row.addWidget(test); row.addWidget(chg); row.addStretch(1); row.addWidget(save); root.addLayout(row)
 
     def load_settings(self) -> None:
         s = self.settings_repository.get(); self.current_settings = s
@@ -64,3 +66,17 @@ class SettingsScreen(QWidget):
             QMessageBox.information(self, "Test email", "Gửi test email thành công.")
         except Exception as ex:
             QMessageBox.critical(self, "Test email", f"Gửi thất bại: {ex}")
+
+    def _change_salary_password(self) -> None:
+        old_pw, ok = QInputDialog.getText(self, "Đổi mật khẩu", "Mật khẩu cũ:", QLineEdit.Password)
+        if not ok: return
+        new_pw, ok = QInputDialog.getText(self, "Đổi mật khẩu", "Mật khẩu mới:", QLineEdit.Password)
+        if not ok: return
+        confirm_pw, ok = QInputDialog.getText(self, "Đổi mật khẩu", "Xác nhận mật khẩu mới:", QLineEdit.Password)
+        if not ok: return
+        success, msg = self.settings_repository.change_salary_password(old_pw, new_pw, confirm_pw)
+        if success:
+            QMessageBox.information(self, "Đổi mật khẩu", msg)
+            if self.lock_service: self.lock_service.force_lock()
+        else:
+            QMessageBox.warning(self, "Đổi mật khẩu", msg)
