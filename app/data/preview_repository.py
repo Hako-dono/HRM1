@@ -80,6 +80,17 @@ class PreviewRepository:
             conn.execute("UPDATE session_recipients SET send_status='Failed', last_error=? WHERE id=?", (error[:500], recipient_id))
             conn.execute("INSERT INTO send_logs(session_id,recipient_id,employee_code,employee_email,action,status,message) SELECT ?,id,employee_code,employee_email,'SEND','FAILED',? FROM session_recipients WHERE id=?", (session_id, error[:500], recipient_id))
 
+
+    def set_session_status(self, session_id: int, status: str) -> None:
+        with self.database.connect() as conn:
+            conn.execute("UPDATE send_sessions SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (status, session_id))
+
+    def mark_remaining_cancelled(self, session_id: int) -> None:
+        with self.database.connect() as conn:
+            conn.execute("""UPDATE session_recipients
+            SET send_status='Chưa gửi do phiên bị hủy', last_error='Session cancelled'
+            WHERE session_id=? AND selected=1 AND send_status='Pending'""", (session_id,))
+
     def update_session_counters(self, session_id: int) -> None:
         with self.database.connect() as conn:
             row = conn.execute("SELECT COUNT(*) total, SUM(CASE WHEN send_status='Sent' THEN 1 ELSE 0 END) sent, SUM(CASE WHEN send_status='Failed' THEN 1 ELSE 0 END) failed FROM session_recipients WHERE session_id=?", (session_id,)).fetchone()

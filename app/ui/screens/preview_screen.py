@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QComboBox, QDialog, QFormLayout, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QTreeWidget,
-                               QTreeWidgetItem, QVBoxLayout, QWidget, QInputDialog)
+                               QTreeWidgetItem, QVBoxLayout, QWidget, QInputDialog, QApplication)
 
 from core.email_service import EmailService
 from core.pdf_service import PdfService
@@ -25,6 +25,7 @@ class PreviewScreen(QWidget):
         self.preview_repo = preview_repo
         self.settings_repo = settings_repo
         self.salary_unlocked = False
+        self.is_sending = False
         self.pdf_service = pdf_service
         self.email_service = email_service
         self.current_session_id: int | None = None
@@ -221,7 +222,46 @@ class PreviewScreen(QWidget):
         )
         if confirm != QMessageBox.Yes:
             return
-        sent, failed = self.email_service.send_bulk(self.current_session_id, ids)
-        QMessageBox.information(self, "Kết quả gửi", f"Sent: {sent} | Failed: {failed}")
+        self._set_edit_locked(True)
+        progress = self._create_progress_dialog(len(ids))
+
+        def on_progress(p):
+            self.progress_current.setText(f"Current: {p.current_recipient}")
+            self.progress_sent.setText(f"Sent: {p.sent_count}")
+            self.progress_failed.setText(f"Failed: {p.failed_count}")
+            self.progress_pending.setText(f"Pending: {p.pending_count}")
+            QApplication.processEvents()
+
+        sent, failed, state = self.email_service.send_bulk(self.current_session_id, ids, progress_cb=on_progress)
+        progress.close()
+        self._set_edit_locked(False)
+        QMessageBox.information(self, "Kết quả gửi", f"Sent: {sent} | Failed: {failed} | State: {state}")
         self.reload_data()
 
+
+    def _set_edit_locked(self, locked: bool) -> None:
+        self.is_sending = locked
+        self.tree.setDisabled(locked)
+        self.search.setDisabled(locked)
+        self.filter_dept.setDisabled(locked)
+        self.filter_data.setDisabled(locked)
+        self.filter_send.setDisabled(locked)
+
+    def _create_progress_dialog(self, total: int) -> QDialog:
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Đang gửi")
+        lay = QVBoxLayout(dlg)
+        self.progress_current = QLabel("Current:")
+        self.progress_sent = QLabel("Sent: 0")
+        self.progress_failed = QLabel("Failed: 0")
+        self.progress_pending = QLabel(f"Pending: {total}")
+        self.progress_total = QLabel(f"Total: {total}")
+        pause_btn = QPushButton("Tạm dừng")
+        cancel_btn = QPushButton("Hủy gửi")
+        pause_btn.clicked.connect(self.email_service.request_pause)
+        cancel_btn.clicked.connect(self.email_service.request_cancel)
+        for w in [self.progress_current, self.progress_sent, self.progress_failed, self.progress_pending, self.progress_total, pause_btn, cancel_btn]:
+            lay.addWidget(w)
+        dlg.show()
+        QApplication.processEvents()
+        return dlg
