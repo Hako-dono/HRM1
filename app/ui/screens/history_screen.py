@@ -4,18 +4,20 @@ from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QLineEdit, QMessa
                                QVBoxLayout, QWidget)
 
 from core.email_service import EmailService
+from core.export_service import ExportService
 from core.import_service import ImportService
 from core.pdf_service import PdfService
 from data.history_repository import HistoryRepository
 
 
 class HistoryScreen(QWidget):
-    def __init__(self, history_repo: HistoryRepository, email_service: EmailService, pdf_service: PdfService, import_service: ImportService) -> None:
+    def __init__(self, history_repo: HistoryRepository, email_service: EmailService, pdf_service: PdfService, import_service: ImportService, export_service: ExportService) -> None:
         super().__init__()
         self.repo = history_repo
         self.email_service = email_service
         self.pdf_service = pdf_service
         self.import_service = import_service
+        self.export_service = export_service
         self.current_session_id = None
         self._build_ui(); self.reload_sessions()
 
@@ -35,6 +37,10 @@ class HistoryScreen(QWidget):
         self.recipients = QTableWidget(0, 8)
         self.recipients.setHorizontalHeaderLabels(["Mã NV","Họ tên","Email","Phòng ban","Send status","Last sent time","PDF file name","Error message"])
         root.addWidget(self.recipients)
+
+        export_btn = QPushButton("Export selected session logs")
+        export_btn.clicked.connect(self.export_selected_session)
+        root.addWidget(export_btn)
 
         act = QHBoxLayout()
         self.mode = QComboBox(); self.mode.addItems(["Use old PDF", "Generate new PDF from newly imported payroll file"])
@@ -87,3 +93,11 @@ class HistoryScreen(QWidget):
                 self.repo.log_resend(self.current_session_id, item.id, "old_pdf" if mode.startswith("Use old") else "new_pdf", "FAILED", str(ex))
         QMessageBox.information(self, "Resend", "Resend completed.")
         self.on_session_selected()
+
+    def export_selected_session(self):
+        if not self.current_session_id:
+            QMessageBox.information(self, "Export", "Vui lòng chọn session để export.")
+            return
+        path = self.export_service.export_session_logs(self.current_session_id)
+        if path:
+            QMessageBox.information(self, "Export", f"Đã export: {path}")

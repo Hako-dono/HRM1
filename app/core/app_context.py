@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from core.email_service import EmailService
+from core.export_service import ExportService
 from core.import_service import ImportService
 from core.pdf_service import PdfService
 from core.salary_lock_service import SalaryLockService
@@ -23,3 +24,4 @@ class AppContext:
         self.pdf_service = PdfService(self.preview_repository, self.settings_repository)
         self.email_service = EmailService(self.settings_repository, self.preview_repository, self.pdf_service)
         self.history_repository = HistoryRepository(self.database)
+        self.export_service = ExportService(self.history_repository)

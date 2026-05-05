@@ -37,6 +37,10 @@ class HistoryRepository:
     def __init__(self, db: Database) -> None:
         self.db = db
 
+    def get_session(self, session_id: int):
+        with self.db.connect() as conn:
+            return conn.execute("SELECT * FROM send_sessions WHERE id=?", (session_id,)).fetchone()
+
     def list_sessions(self, payroll_month: str | None = None) -> list[SessionHistory]:
         q = "SELECT * FROM send_sessions"
         args = []

@@ -2,6 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
 
 from core.email_service import EmailService
+from core.export_service import ExportService
 from core.import_service import ImportService
 from core.pdf_service import PdfService
 from core.salary_lock_service import SalaryLockService
@@ -16,13 +17,13 @@ from ui.screens.settings_screen import SettingsScreen
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, settings_repository: SettingsRepository, import_service: ImportService, preview_repository: PreviewRepository, pdf_service: PdfService, email_service: EmailService, history_repository: HistoryRepository, lock_service: SalaryLockService) -> None:
+    def __init__(self, settings_repository: SettingsRepository, import_service: ImportService, preview_repository: PreviewRepository, pdf_service: PdfService, email_service: EmailService, history_repository: HistoryRepository, lock_service: SalaryLockService, export_service: ExportService) -> None:
         super().__init__()
         self.setWindowTitle("Smart Payslip")
         self.resize(1280, 800)
-        self._setup_ui(settings_repository, import_service, preview_repository, pdf_service, email_service, history_repository, lock_service)
+        self._setup_ui(settings_repository, import_service, preview_repository, pdf_service, email_service, history_repository, lock_service, export_service)
 
-    def _setup_ui(self, settings_repository, import_service, preview_repository, pdf_service, email_service, history_repository, lock_service) -> None:
+    def _setup_ui(self, settings_repository, import_service, preview_repository, pdf_service, email_service, history_repository, lock_service, export_service) -> None:
         cw = QWidget(); self.setCentralWidget(cw)
         root = QHBoxLayout(cw); root.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._create_sidebar())
@@ -30,7 +31,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(DashboardScreen(lock_service))
         self.stack.addWidget(ImportScreen(import_service))
         self.stack.addWidget(PreviewScreen(preview_repository, settings_repository, pdf_service, email_service, lock_service))
-        self.stack.addWidget(HistoryScreen(history_repository, email_service, pdf_service, import_service))
+        self.stack.addWidget(HistoryScreen(history_repository, email_service, pdf_service, import_service, export_service))
         self.stack.addWidget(SettingsScreen(settings_repository, email_service, lock_service))
         root.addWidget(self.stack, 1)
 
