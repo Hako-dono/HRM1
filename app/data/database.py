@@ -12,6 +12,7 @@ class Database:
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
     def initialize(self) -> None:
@@ -43,8 +44,12 @@ class Database:
                     sent_count INTEGER NOT NULL DEFAULT 0,
                     failed_count INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     started_at TEXT,
-                    ended_at TEXT
+                    ended_at TEXT,
+                    session_folder TEXT,
+                    payroll_source_file TEXT,
+                    employee_source_file TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS session_recipients (
@@ -52,12 +57,20 @@ class Database:
                     session_id INTEGER NOT NULL,
                     employee_code TEXT NOT NULL,
                     employee_name TEXT,
+                    job_title TEXT,
+                    department TEXT,
                     employee_email TEXT,
+                    employment_status TEXT,
+                    net_amount REAL,
+                    payroll_data_json TEXT,
+                    validation_status TEXT NOT NULL DEFAULT 'valid',
+                    validation_message TEXT,
+                    sendable INTEGER NOT NULL DEFAULT 1,
                     send_status TEXT NOT NULL DEFAULT 'Pending',
                     selected INTEGER NOT NULL DEFAULT 1,
                     last_error TEXT,
                     sent_at TEXT,
-                    FOREIGN KEY (session_id) REFERENCES send_sessions(id)
+                    FOREIGN KEY (session_id) REFERENCES send_sessions(id) ON DELETE CASCADE
                 );
 
                 CREATE TABLE IF NOT EXISTS send_logs (
@@ -75,9 +88,4 @@ class Database:
                 );
                 """
             )
-            conn.execute(
-                """
-                INSERT INTO settings (id) VALUES (1)
-                ON CONFLICT(id) DO NOTHING
-                """
-            )
+            conn.execute("INSERT INTO settings (id) VALUES (1) ON CONFLICT(id) DO NOTHING")

@@ -8,11 +8,9 @@ from ui.main_window import MainWindow
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Smart Payslip")
-
     app_context = AppContext()
-    window = MainWindow(app_context.settings_repository)
+    window = MainWindow(app_context.settings_repository, app_context.import_service)
     window.showFullScreen()
-
     return app.exec()
 
 
