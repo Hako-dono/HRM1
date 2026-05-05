@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from data.database import Database
@@ -20,6 +21,16 @@ class RecipientView:
     selected: bool
 
 
+@dataclass
+class RecipientPayslipData:
+    employee_code: str
+    employee_name: str
+    department: str
+    job_title: str
+    payroll_month: str
+    payroll_data: dict
+
+
 class PreviewRepository:
     def __init__(self, database: Database) -> None:
         self.database = database
@@ -38,6 +49,24 @@ class PreviewRepository:
             net_amount=r["net_amount"], validation_status=r["validation_status"] or "valid", send_status=r["send_status"] or "Pending",
             sendable=bool(r["sendable"]), selected=bool(r["selected"])
         ) for r in rows]
+
+    def get_payslip_data(self, recipient_id: int) -> RecipientPayslipData | None:
+        with self.database.connect() as conn:
+            row = conn.execute(
+                """SELECT r.employee_code,r.employee_name,r.department,r.job_title,r.payroll_data_json,s.payroll_month
+                   FROM session_recipients r JOIN send_sessions s ON s.id=r.session_id WHERE r.id=?""",
+                (recipient_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return RecipientPayslipData(
+            employee_code=row["employee_code"] or "",
+            employee_name=row["employee_name"] or "",
+            department=row["department"] or "",
+            job_title=row["job_title"] or "",
+            payroll_month=row["payroll_month"] or "",
+            payroll_data=json.loads(row["payroll_data_json"] or "{}"),
+        )
 
     def update_email(self, recipient_id: int, email: str, validation_status: str, sendable: bool) -> None:
         with self.database.connect() as conn:
