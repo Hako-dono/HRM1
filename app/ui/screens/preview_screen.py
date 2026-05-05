@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QComboBox, QDialog, QFormLayout, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget, QInputDialog)
 
+from core.email_service import EmailService
 from core.pdf_service import PdfService
 from data.preview_repository import PreviewRepository, RecipientView
 from data.settings_repository import SettingsRepository
@@ -19,12 +20,13 @@ PAYROLL_FIELDS = [
 
 
 class PreviewScreen(QWidget):
-    def __init__(self, preview_repo: PreviewRepository, settings_repo: SettingsRepository, pdf_service: PdfService) -> None:
+    def __init__(self, preview_repo: PreviewRepository, settings_repo: SettingsRepository, pdf_service: PdfService, email_service: EmailService) -> None:
         super().__init__()
         self.preview_repo = preview_repo
         self.settings_repo = settings_repo
         self.salary_unlocked = False
         self.pdf_service = pdf_service
+        self.email_service = email_service
         self.current_session_id: int | None = None
         self._build_ui()
         self.reload_data()
@@ -45,7 +47,8 @@ class PreviewScreen(QWidget):
         lock_btn = QPushButton("Khóa dữ liệu lương"); lock_btn.clicked.connect(self.lock_salary)
         gen_btn = QPushButton("Tạo PDF cá nhân"); gen_btn.clicked.connect(self.generate_individual_pdfs)
         batch_btn = QPushButton("Tạo PDF batch print"); batch_btn.clicked.connect(self.generate_batch_pdf)
-        for w in [self.search, self.filter_dept, self.filter_data, self.filter_send, reload_btn, unlock_btn, lock_btn, gen_btn, batch_btn]: toolbar.addWidget(w)
+        send_btn = QPushButton("Gửi email đã chọn"); send_btn.clicked.connect(self.send_selected_emails)
+        for w in [self.search, self.filter_dept, self.filter_data, self.filter_send, reload_btn, unlock_btn, lock_btn, gen_btn, batch_btn, send_btn]: toolbar.addWidget(w)
         root.addLayout(toolbar)
 
         self.stats = QLabel(); root.addWidget(self.stats)
@@ -198,4 +201,27 @@ class PreviewScreen(QWidget):
         path = self.pdf_service.generate_batch(ids, pw)
         if path:
             QMessageBox.information(self, "Hoàn tất", f"Đã tạo batch PDF: {path}")
+
+
+    def send_selected_emails(self) -> None:
+        if not self.current_session_id:
+            return
+        ids = [r.id for r in self.recipients if r.selected and r.sendable]
+        if not ids:
+            QMessageBox.information(self, "Không có dữ liệu", "Không có recipient hợp lệ được chọn gửi.")
+            return
+        summary = self.preview_repo.get_session_summary(self.current_session_id)
+        settings = self.settings_repo.get()
+        confirm = QMessageBox.question(
+            self,
+            "Xác nhận gửi",
+            f"Payroll month: {summary['payroll_month']}\nSession code: {summary['session_code']}\nSố email sẽ gửi: {len(ids)}\nDelay hiện tại: {settings.send_delay_seconds}s\n\nVui lòng kiểm tra kỹ email người nhận và file đính kèm trước khi gửi.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if confirm != QMessageBox.Yes:
+            return
+        sent, failed = self.email_service.send_bulk(self.current_session_id, ids)
+        QMessageBox.information(self, "Kết quả gửi", f"Sent: {sent} | Failed: {failed}")
+        self.reload_data()
 

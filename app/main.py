@@ -1,6 +1,5 @@
 import sys
 from PySide6.QtWidgets import QApplication
-
 from core.app_context import AppContext
 from ui.main_window import MainWindow
 
@@ -8,9 +7,9 @@ from ui.main_window import MainWindow
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Smart Payslip")
-    app_context = AppContext()
-    window = MainWindow(app_context.settings_repository, app_context.import_service, app_context.preview_repository, app_context.pdf_service)
-    window.showFullScreen()
+    c = AppContext()
+    w = MainWindow(c.settings_repository, c.import_service, c.preview_repository, c.pdf_service, c.email_service)
+    w.showFullScreen()
     return app.exec()
 
 

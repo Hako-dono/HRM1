@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from core.email_service import EmailService
 from core.import_service import ImportService
 from core.pdf_service import PdfService
 from data.database import Database
@@ -17,3 +18,4 @@ class AppContext:
         self.import_service = ImportService(self.import_repository)
         self.preview_repository = PreviewRepository(self.database)
         self.pdf_service = PdfService(self.preview_repository, self.settings_repository)
+        self.email_service = EmailService(self.settings_repository, self.preview_repository, self.pdf_service)
