@@ -4,6 +4,7 @@ from core.email_service import EmailService
 from core.import_service import ImportService
 from core.pdf_service import PdfService
 from data.database import Database
+from data.history_repository import HistoryRepository
 from data.import_repository import ImportRepository
 from data.preview_repository import PreviewRepository
 from data.settings_repository import SettingsRepository
@@ -19,3 +20,4 @@ class AppContext:
         self.preview_repository = PreviewRepository(self.database)
         self.pdf_service = PdfService(self.preview_repository, self.settings_repository)
         self.email_service = EmailService(self.settings_repository, self.preview_repository, self.pdf_service)
+        self.history_repository = HistoryRepository(self.database)

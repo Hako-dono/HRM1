@@ -65,6 +65,8 @@ class Database:
                     payroll_data_json TEXT,
                     validation_status TEXT NOT NULL DEFAULT 'valid',
                     validation_message TEXT,
+                    is_resend INTEGER NOT NULL DEFAULT 0,
+                    resend_mode TEXT,
                     sendable INTEGER NOT NULL DEFAULT 1,
                     send_status TEXT NOT NULL DEFAULT 'Pending',
                     selected INTEGER NOT NULL DEFAULT 1,
@@ -82,6 +84,8 @@ class Database:
                     action TEXT NOT NULL,
                     status TEXT NOT NULL,
                     message TEXT,
+                    is_resend INTEGER NOT NULL DEFAULT 0,
+                    resend_mode TEXT,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (session_id) REFERENCES send_sessions(id),
                     FOREIGN KEY (recipient_id) REFERENCES session_recipients(id)
